@@ -6,12 +6,8 @@ from pathlib import Path
 from typing import List
 
 import weaviate
-from weaviate.classes.config import Property, DataType, Configure
 from weaviate.classes.query import MetadataQuery
 
-from docling.document_converter import DocumentConverter
-from llama_index.core import Document
-from llama_index.core.node_parser import MarkdownNodeParser
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAIResponses
 from llama_index.core.llms import ChatMessage
@@ -32,42 +28,7 @@ OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
 
 def init_weaviate():
     client = weaviate.connect_to_local()
-    
-    # client.collections.create(
-    # name=CLASS_NAME,
-    # properties=[
-    #     Property(name="text", data_type=DataType.TEXT),
-    #     Property(name="source", data_type=DataType.TEXT),
-    # ],
-    # vector_config=Configure.Vectors.self_provided(),
-    # )
-
     return client
-
-
-def ingestion(client):
-    converter = DocumentConverter()
-    parser = MarkdownNodeParser()
-    embed_model = OpenAIEmbedding(api_key=OPENAI_API_KEY)
-    collection = client.collections.use(CLASS_NAME)
-
-    for file in DATA_PATH.glob("*.pdf"):
-        print(f"Ingesting: {file.name}")
-
-        markdown = converter.convert(file).document.export_to_markdown()
-        nodes = parser.get_nodes_from_documents([Document(text=markdown)])
-
-        for node in nodes:
-            vector = embed_model.get_text_embedding(node.text)
-
-            collection.data.insert(
-                properties={
-                    "text": node.text,
-                    "source": file.name
-                },
-                vector=vector,
-            )
-
         
 def vector_retrieve(client, query: str, top_k: int = 10):
     embed_model = OpenAIEmbedding(api_key=OPENAI_API_KEY)
@@ -154,8 +115,6 @@ def main():
         api_key=OPENAI_API_KEY
     )
     try:
-        # ingestion(client)
-
         while True:
             q = input("\nAsk (or exit): ")
             if q.lower() == "exit":
@@ -167,8 +126,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-'''
-test question: what conditions make an arbitration agreement valid, irrevocable, and enforceable?
-'''
